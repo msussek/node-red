@@ -1,0 +1,470 @@
+[
+    {
+        "id": "7bbfa32a.6f896c",
+        "type": "tab",
+        "label": "Pvoutput",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "9c09b6c3.fd4ca8",
+        "type": "inject",
+        "z": "7bbfa32a.6f896c",
+        "name": "Send Manually",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "x": 153,
+        "y": 102,
+        "wires": [
+            [
+                "98e8f45b.025f48"
+            ]
+        ]
+    },
+    {
+        "id": "29acbc68.95e284",
+        "type": "http request",
+        "z": "7bbfa32a.6f896c",
+        "name": "Post",
+        "method": "POST",
+        "ret": "txt",
+        "url": "",
+        "tls": "",
+        "x": 734.25,
+        "y": 99,
+        "wires": [
+            [
+                "4a39c3f7.b16ccc",
+                "cff27e27.19e19"
+            ]
+        ]
+    },
+    {
+        "id": "98e8f45b.025f48",
+        "type": "function",
+        "z": "7bbfa32a.6f896c",
+        "name": "Set API key here 1",
+        "func": "msg.action = msg.payload;\nmsg.headers = { \n 'X-Pvoutput-Apikey': 'myApikeyHere',\n 'X-Pvoutput-SystemId': 'mySystemIdHere',\n 'Content-Type': 'application/x-www-form-urlencoded'\n};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 393.75,
+        "y": 100.5,
+        "wires": [
+            [
+                "ba7951b9.7ff5a"
+            ]
+        ]
+    },
+    {
+        "id": "4a39c3f7.b16ccc",
+        "type": "debug",
+        "z": "7bbfa32a.6f896c",
+        "name": "headercheck",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "x": 925,
+        "y": 99,
+        "wires": []
+    },
+    {
+        "id": "fa696451.760b98",
+        "type": "inject",
+        "z": "7bbfa32a.6f896c",
+        "name": "Every 5 mins",
+        "topic": "",
+        "payload": "",
+        "payloadType": "str",
+        "repeat": "300",
+        "crontab": "",
+        "once": false,
+        "x": 155,
+        "y": 150,
+        "wires": [
+            [
+                "98e8f45b.025f48"
+            ]
+        ]
+    },
+    {
+        "id": "e454d6a8.23fd58",
+        "type": "comment",
+        "z": "7bbfa32a.6f896c",
+        "name": "Send data to PVOutput.org",
+        "info": "This flow allows you to send data to PVOutput.org\n\nYou'll need to sign up an account (it's free) and get\nAPI key.\n\nYou need to put this API key and the System ID\ninto both the \"Set API Key here\" boxes.\n\nMake sure you have set the correct Time Zone in the console - \n  sudo dpkg-reconfigure tzdata\n  \nAnd also in the EmonCMS webpage account settings.\n\nOtherwise you'll get offset graphs and data.",
+        "x": 158,
+        "y": 37,
+        "wires": []
+    },
+    {
+        "id": "82b08339.97cd4",
+        "type": "debug",
+        "z": "7bbfa32a.6f896c",
+        "name": "Debug1",
+        "active": false,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "x": 736,
+        "y": 146.5,
+        "wires": []
+    },
+    {
+        "id": "ba7951b9.7ff5a",
+        "type": "function",
+        "z": "7bbfa32a.6f896c",
+        "name": "Set up data",
+        "func": "msg.action = msg.payload;\n\nmsg.url = \"http://pvoutput.org/service/r2/addstatus.jsp\";\n\n// set up the data/time\nvar now     = new Date(); \nvar year    = now.getFullYear(); \nvar month   = now.getMonth()+1; // Months start at 0 not 1 - FTFY\nvar day     = now.getDate();\nvar hour    = now.getHours(); \n\n//var hour    = now.getHours()+1; // GMT to BST\n//if (hour === 24) { // BST overflow - This clearly needs some work!\n//    hour = 0;\n//    day = day +1;\n//}     \n\nvar minute  = now.getMinutes();\nvar second  = now.getSeconds(); \n\n// fix any short date/times so all values are two digits\nif(month.toString().length == 1)  { var month = '0'+month; }\nif(day.toString().length == 1)    { var day = '0'+day;}\nif(hour.toString().length == 1)   { var hour = '0'+hour; }\nif(minute.toString().length == 1) { var minute = '0'+minute; }\nif(second.toString().length == 1) { var second = '0'+second; }\n\nuploaddate = year.toString()+month.toString()+day.toString(); // string the dates or we get errors!\n\n//pull back stored data\nvar power1 = flow.get('power1')||0;  // Power1 - Grid power import/export\nvar power2 = flow.get('power2')||0;  // Power2 - Solar power import\nvar power3 = flow.get('power3')||0;  // Power3 - My EV charger (you may use this for something else - or not)\n//var vrms   = flow.get('vrms')||0;    // Grid voltage\nvar contot = flow.get('contot')||0;  // Consumption total for the day (watts)\nvar gentot = flow.get('gentot')||0;  // Generation total for the day (watts)\nvar power1max = flow.get('power1max')||0;  // Power1max - maximum Power1 of the last 5mins\ncontot = (Math.round(contot*100))/100;     // trim to 2dp\nvar powerc = parseInt(power1, 10) + parseInt(power2, 10); // Consumption power now (need to convert back from string to int in decimal). Use Power1 or Power1max as described in function StorePower1\n// v1=gentotal v2=solar v3=contotal v4=con_max v5=t v6=EV v7=t_hall v8=t_landing v9=t_attic v10=t_outside v11=t_top v12=t_bottom\n//msg.payload = {\"d\":year+month+day,\"t\":hour+':'+minute,\"v1\":gentot,\"v2\":power2,\"v3\":contot,\"v4\":power1max,\"v6\":vrms,\"v8\":\"28.1\"};\n\nif (power2 < 0 || gentot < 0) {power2=0; genntot=0;}\n\nmsg.payload = {\"d\":uploaddate,\"t\":hour+':'+minute,\"v1\":gentot,\"v2\":power2,\"v3\":contot};\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 570,
+        "y": 100,
+        "wires": [
+            [
+                "29acbc68.95e284",
+                "82b08339.97cd4",
+                "f5578266.cf413"
+            ]
+        ]
+    },
+    {
+        "id": "c3dddff6.64449",
+        "type": "function",
+        "z": "7bbfa32a.6f896c",
+        "name": "Store Power2",
+        "func": "// Just for reference all the calcs are done here due to timing issues with data turning up on two difference MQTT queues\n// the power1/power2 values get out of step and produce odd results.\n\n// initialise power2 to 0 if it doesn't exist already\nvar power2 = msg.payload;\nvar gentot = flow.get('gentot')||0;   // generation total (for the day so far)\nvar gen_ts = flow.get('gen_ts')||0;   // generation timestamp of last reading\nvar con_ts = flow.get('con_ts')||0;   // consumption timestamp of last read     or 0 if not set\nvar now_ts = Math.round(+new Date()); // now timestamp\n\nvar power1 = flow.get('power1')||0;   // get power1\nif (power1 === 0) {power1 = 1; }      // match the old system\n\n\nif (power2 < 0) {power2=0; gentot=0;}\n\n\nif (gen_ts === 0) { // no previous gen timestamp\n   flow.set('gentot',0);\n   flow.set('gen_ts',now_ts);\n   flow.set('power2',power2);\n} else {\n   var diff = (now_ts - gen_ts) / 1000; // time since last reading in seconds\n   gentot = gentot + (power2 / 3600 * diff); // increase the consumption total by the watts * seconds\n   gentot = (Math.round(gentot*100))/100; // trim to 2dp\n   flow.set('gentot',gentot);\n   flow.set('gen_ts',now_ts);\n   flow.set('power2',power2);\n}\n\nif (con_ts === 0) { // no previous consumption timestamp\n   var diff = 0;\n   flow.set('con_ts',now_ts);\n   flow.set('power1',power1);\n   flow.set('power1max',power1);\n   flow.set('powerc',0);\n} else {\n   var powerc = parseInt(power1, 10) + parseInt(power2, 10); //  Consumption power now (need to convert back from string to int in decimal)\n   flow.set('powerc',powerc);                // store for later\n   var diff = (now_ts - con_ts) / 1000;       // time since last reading in seconds\n   var powinc = (powerc / 3600 * diff);\n   flow.set('con_ts',now_ts);   \n   flow.set('power1',power1);\n}\n\n// this section stores the max power usage - short spikes like kettles/toasters/microwave are missed from PVO graphing\n// if you don't like this remove this section. power1max is reset in the SetUpData function after POSTing\nvar power1max = flow.get('power1max')||0;\nif (powerc > power1max) {power1max = powerc; flow.set('power1max',power1max); }\n\nvar timestamp = new Date();\n\nvar now     = new Date(); \nvar hour    = now.getHours(); \nvar minute  = now.getMinutes();\nvar second  = now.getSeconds(); \n\n//msg.payload = {\"ConTot\": contot, \"Power1\": power1, \"Power2\": power2, \" DiffTS\": diff, \"Power1max\": power1max, \"PowerC\": powerc, \"PowInc\": powinc, \"GenTot\": gentot, \"PowerA\": power1, \"PowerB\": power2};\n\nvar msg1 = { payload: {\"PowA\":power1, \"PowB\": power2, \"Power1max\": power1max, \"H\": hour, \"M\": minute, \"S\":second} };\nvar msg2 = { payload: powerc };\nreturn [ msg1, msg2 ];\n\n\n",
+        "outputs": "2",
+        "noerr": 0,
+        "x": 300,
+        "y": 340,
+        "wires": [
+            [
+                "44f6847b.5f771c"
+            ],
+            [
+                "6a54e72e.f4c238"
+            ]
+        ]
+    },
+    {
+        "id": "44f6847b.5f771c",
+        "type": "debug",
+        "z": "7bbfa32a.6f896c",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 505,
+        "y": 334,
+        "wires": []
+    },
+    {
+        "id": "36966d64.445462",
+        "type": "inject",
+        "z": "7bbfa32a.6f896c",
+        "name": "Reset cumulative counters",
+        "topic": "ResetPVO",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "59 23 * * *",
+        "once": false,
+        "onceDelay": "",
+        "x": 910,
+        "y": 413,
+        "wires": [
+            [
+                "ea109730.f67d88"
+            ]
+        ]
+    },
+    {
+        "id": "ea109730.f67d88",
+        "type": "function",
+        "z": "7bbfa32a.6f896c",
+        "name": "Reset totals",
+        "func": "// its midnight - reset the accumulated totals\ngentot = 0; // generation total for the day\nflow.set('gentot',gentot);\ncontot = 0; // comsumption total for the day\nflow.set('contot',contot);",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1121,
+        "y": 413,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "cff27e27.19e19",
+        "type": "function",
+        "z": "7bbfa32a.6f896c",
+        "name": "Check Status 1",
+        "func": "if (msg.statusCode == 200) { \n   var stat = \"\";\n   flow.set('pvostat','200');  // this clears the outstanding PVO data, so it won't be uploaded again\n   var msg1 = null;\n   var msg2 = null;\n} else {\n   var time = new Date().toString();\n   flow.set('pvostat', msg.statusCode);\n   var stat = \"FAILED: Time:\" + time + \"  StatusCode:\" + msg.statusCode + \"  StatusMsg:\" + msg.payload;\n   var msg1 = null;\n   var msg2 = null;\n//   msg1.payload = stat;\n//   msg2.payload = stat;\n   var msg1 =  { payload: stat };\n   var msg2 =  { payload: stat };\n}\nreturn (msg1, msg2);",
+        "outputs": "2",
+        "noerr": 0,
+        "x": 924,
+        "y": 148,
+        "wires": [
+            [
+                "30eaac2a.dfc544",
+                "dbdc3cf2.1e6d6"
+            ],
+            [
+                "5676cbee.682c04"
+            ]
+        ]
+    },
+    {
+        "id": "30eaac2a.dfc544",
+        "type": "debug",
+        "z": "7bbfa32a.6f896c",
+        "name": "Post dump1",
+        "active": false,
+        "console": "false",
+        "complete": "payload",
+        "x": 1121,
+        "y": 122,
+        "wires": []
+    },
+    {
+        "id": "904366df.275338",
+        "type": "inject",
+        "z": "7bbfa32a.6f896c",
+        "name": "Every Midnight",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "59 23 * * *",
+        "once": false,
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "98e8f45b.025f48"
+            ]
+        ]
+    },
+    {
+        "id": "5676cbee.682c04",
+        "type": "file",
+        "z": "7bbfa32a.6f896c",
+        "name": "PVO error log1",
+        "filename": "/media/usb/pvo_errors.log",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "false",
+        "x": 1137,
+        "y": 210,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f5578266.cf413",
+        "type": "function",
+        "z": "7bbfa32a.6f896c",
+        "name": "Store PVO data",
+        "func": "//store the PVO data in case it doesn't upload correctly\nflow.set ('pvodata',msg.payload)\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 578,
+        "y": 187,
+        "wires": [
+            [
+                "d6c87ff0.b0e3a"
+            ]
+        ]
+    },
+    {
+        "id": "dbdc3cf2.1e6d6",
+        "type": "file",
+        "z": "7bbfa32a.6f896c",
+        "name": "PVO Data",
+        "filename": "PVO_data.log",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "false",
+        "x": 1121,
+        "y": 159,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "d6c87ff0.b0e3a",
+        "type": "debug",
+        "z": "7bbfa32a.6f896c",
+        "name": "Data stored",
+        "active": false,
+        "console": "false",
+        "complete": "payload",
+        "x": 751,
+        "y": 189,
+        "wires": []
+    },
+    {
+        "id": "d4dd5bf9.021cf8",
+        "type": "inject",
+        "z": "7bbfa32a.6f896c",
+        "name": "Clear error",
+        "topic": "",
+        "payload": "Clear",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "x": 873,
+        "y": 613,
+        "wires": [
+            [
+                "ed7fd6c3.0631c8"
+            ]
+        ]
+    },
+    {
+        "id": "ed7fd6c3.0631c8",
+        "type": "function",
+        "z": "7bbfa32a.6f896c",
+        "name": "cleared",
+        "func": "flow.set('pvo', 200);  // this clears the outstanding PVO upload error\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1046,
+        "y": 612,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "4531faf9.e1a454",
+        "type": "comment",
+        "z": "7bbfa32a.6f896c",
+        "name": "The Main Event",
+        "info": "This next big bit (esp. Store Power2) does the heavy lifting",
+        "x": 100,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "4b5fb7c6.d83fd8",
+        "type": "comment",
+        "z": "7bbfa32a.6f896c",
+        "name": "Other data to be sent",
+        "info": "The boxes below pull in other data to be sent to PVO.\nAdjust to your needs, and amend the Set Up Data function",
+        "x": 120,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "50cb9ebd.fadda",
+        "type": "comment",
+        "z": "7bbfa32a.6f896c",
+        "name": "Debugging nodes",
+        "info": "",
+        "x": 864,
+        "y": 557,
+        "wires": []
+    },
+    {
+        "id": "bde9e54d.3d99e8",
+        "type": "comment",
+        "z": "7bbfa32a.6f896c",
+        "name": "Reset the counters at midnight",
+        "info": "This bit redaily sets the cumulative counters",
+        "x": 894,
+        "y": 369,
+        "wires": []
+    },
+    {
+        "id": "4092f75c.216128",
+        "type": "ioBroker in",
+        "z": "7bbfa32a.6f896c",
+        "name": "Wirkleistung PV",
+        "topic": "modbus.0.inputRegisters.30775_AC_Wirkleistung W",
+        "payloadType": "value",
+        "onlyack": "",
+        "func": "rbe",
+        "gap": "",
+        "x": 100,
+        "y": 340,
+        "wires": [
+            [
+                "c3dddff6.64449"
+            ]
+        ]
+    },
+    {
+        "id": "6a54e72e.f4c238",
+        "type": "debug",
+        "z": "7bbfa32a.6f896c",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 500,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "8b21ab44.443ae8",
+        "type": "ioBroker in",
+        "z": "7bbfa32a.6f896c",
+        "name": "Power consumption of Today",
+        "topic": "javascript.0.Strom.Verbrauch.Today",
+        "payloadType": "value",
+        "onlyack": "",
+        "func": "all",
+        "gap": "",
+        "x": 140,
+        "y": 440,
+        "wires": [
+            [
+                "7af95137.9de23"
+            ]
+        ]
+    },
+    {
+        "id": "7af95137.9de23",
+        "type": "function",
+        "z": "7bbfa32a.6f896c",
+        "name": "Store contot",
+        "func": "var contot = msg.payload;\nflow.set('contot',contot);\n\nmsg.payload = \"contot:\" + contot;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 350,
+        "y": 440,
+        "wires": [
+            [
+                "a2730aa7.b49d38"
+            ]
+        ]
+    },
+    {
+        "id": "a2730aa7.b49d38",
+        "type": "debug",
+        "z": "7bbfa32a.6f896c",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 540,
+        "y": 460,
+        "wires": []
+    }
+]
