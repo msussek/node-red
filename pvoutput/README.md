@@ -1,4 +1,4 @@
-# Upload Data from ioBroker to Pvoutput
+# Upload Data from ioBroker to Pvoutput using Node-RED
 
 <img src="img/screenshot.png" width=1024 /><br/>
 
