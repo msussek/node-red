@@ -1,6 +1,6 @@
 # Upload Data from ioBroker to Pvoutput
 
-<img src="img/screenshot.jpg" width=1024 /><br/>
+<img src="img/screenshot.png" width=1024 /><br/>
 
 This Flow can be used to upload Generation-Data of a PV Plant and Consumption-Data to the portal pvoutput.org.
 
